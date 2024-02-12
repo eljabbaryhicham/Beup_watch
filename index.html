@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'/>
+    <title>Beup</title>
+    <meta content='My Page Description' name='description'/>
+    <link href='https://cdn.plyr.io/3.7.8/plyr.css' rel='stylesheet'/>
+    <script src='https://cdn.plyr.io/3.7.8/plyr.js'></script>
+    <link href='https://cdn.jsdelivr.net/gh/eljabbaryhicham/Plyr-CSS@main/beup_styles.css' rel='stylesheet'/>
+    <script src='//cdn.jsdelivr.net/npm/hls.js@1'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/hls.js/8.0.0-beta.3/hls.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/hls.js/8.0.0-beta.3/hls.min.js'></script>
+    <script src='//cdn.jsdelivr.net/npm/hls.js@latest'></script>
+    <script src='https://cdn.rawgit.com/video-dev/hls.js/18bb552/dist/hls.min.js'></script>
+    <style>
+        .text-area-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 90%;
+            display: flex; /* Initially show the overlay */
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease; /* Smooth transition */
+            opacity: 1; /* Initially visible */
+        }
+
+        .text-area-overlay textarea {
+            width: 50%;
+            height: 40px;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            outline: none;
+            opacity: 0.3;
+            transition: opacity 0.5s ease; /* Smooth transition */
+        }
+
+        .text-area-overlay textarea::placeholder {
+            color: #fff;
+            opacity: 0.3;
+        }
+
+        .hidden {
+            display: none; /* Hide inactive text area */
+        }
+
+        #switchButton {
+            background-color: #ff555a; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        #switchButton:hover {
+            background-color: #ff555B; /* Darker Green */
+        }
+
+        #switchButton:active {
+            background-color: #ff555C; /* Active Darker Green */
+        }
+
+        /* Cool Animation */
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px #ff555a; }
+            50% { box-shadow: 0 0 20px #ff555a; }
+            100% { box-shadow: 0 0 5px #ff555a; }
+        }
+
+        #switchButton:hover {
+            animation: glow 1s infinite alternate;
+        }
+
+    </style>
+
+</head>
+<body>
+    <div allow='autoplay' class='vid'>
+        <video allow='autoplay' autoplay='true' id='player' poster='https://1.bp.blogspot.com/-vYG6xhtQtU0/XVOD1NB9o7I/AAAAAAAACZk/rb9g1ozkW9sU4IdaE0JDU0cTW3V-frt8QCLcBGAs/s1600/logo-beup-colored.png'>
+            <source size='576' src='https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4'/>
+        </video>
+        <div class='text-area-overlay'>
+            <textarea id="videoLink" placeholder='Replace with your HLS link...' class="active"></textarea>
+            <textarea id="defaultLink" placeholder='Replace with your MP4 link...' class="hidden"></textarea>
+            <button id="switchButton">Switch</button>
+        </div>
+    </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let defaultSource = 'https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4'; // Default video source
+        const video = document.querySelector('video');
+        const overlay = document.querySelector('.text-area-overlay');
+        const videoLinkTextarea = document.getElementById('videoLink');
+        const defaultLinkTextarea = document.getElementById('defaultLink');
+        const switchButton = document.getElementById('switchButton');
+        let timer;
+        let isDefaultSource = true;
+
+        // Initialize Plyr player
+        const player = new Plyr(video, {
+            captions: { active: true, update: true },
+            controls: [
+                'play-large', 'rewind', 'play', 'fast-forward', 'progress',
+                'current-time', 'duration', 'mute', 'volume', 'settings',
+                'pip', 'airplay', 'fullscreen', 'download'
+            ],
+            quality: {
+                default: 720,
+                options: [1080, 720, 480, 360],
+                forced: true,
+                onChange: quality => console.log('Quality changed to', quality)
+            },
+            debug: true,
+            restart: true,
+            autoplay: true,
+            settings: ['captions', 'quality', 'speed', 'loop']
+        });
+
+        // Load default video source initially
+        video.src = defaultSource;
+
+        // Update source on switch button click
+        switchButton.addEventListener('click', function() {
+            if (isDefaultSource) {
+                const newVideoLink = videoLinkTextarea.value.trim();
+                if (newVideoLink) {
+                    if (!Hls.isSupported()) {
+                        video.src = newVideoLink;
+                    } else {
+                        const hls = new Hls();
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            if (data.fatal) {
+                                console.log('Fatal HLS error occurred, playing default video.');
+                                video.src = defaultSource;
+                            }
+                        });
+                        hls.loadSource(newVideoLink);
+                        hls.attachMedia(video);
+                        window.hls = hls;
+
+                        player.on('languagechange', () => {
+                            setTimeout(() => hls.subtitleTrack = player.currentTrack, 50);
+                        });
+                    }
+                    isDefaultSource = false;
+                }
+            } else {
+                const newDefaultLink = defaultLinkTextarea.value.trim();
+                if (newDefaultLink) {
+                    video.src = newDefaultLink;
+                } else {
+                    video.src = defaultSource;
+                }
+                isDefaultSource = true;
+            }
+            // Toggle visibility of text areas
+            videoLinkTextarea.classList.toggle('active');
+            videoLinkTextarea.classList.toggle('hidden');
+            defaultLinkTextarea.classList.toggle('active');
+            defaultLinkTextarea.classList.toggle('hidden');
+        });
+
+        // Function to hide overlay after 0.5 second of inactivity if cursor is not hovering over text area or button
+        const hideOverlay = () => {
+            timer = setTimeout(() => {
+                if (!overlay.matches(':hover') && !videoLinkTextarea.matches(':focus') &&
+                    !defaultLinkTextarea.matches(':focus') && !switchButton.matches(':hover')) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                    }, 500); // Delay hiding to allow smooth transition
+                }
+            }, 500);
+        };
+
+        // Mouse movement and typing event listeners on document
+        document.addEventListener('mousemove', () => {
+            clearTimeout(timer); // Reset the timer
+            overlay.style.display = 'flex'; // Show the overlay
+            overlay.style.opacity = '1'; // Make overlay visible
+            hideOverlay(); // Start the timer again
+        });
+
+        document.addEventListener('input', () => {
+            clearTimeout(timer); // Reset the timer
+            overlay.style.display = 'flex'; // Show the overlay
+            overlay.style.opacity = '1'; // Make overlay visible
+            hideOverlay(); // Start the timer again
+        });
+
+        window.player = player;
+    });
+</script>
+
+
+
+
+</body>
+</html>
